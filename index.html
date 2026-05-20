@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predračuni</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0efe9;
+  --border: rgba(0,0,0,0.11); --border2: rgba(0,0,0,0.22);
+  --text: #1a1a18; --text2: #5f5e5a; --text3: #9a9990;
+  --accent: #1a1a18; --success: #2d7a3a; --success-bg: #eaf3de;
+  --danger: #c0392b; --danger-bg: #fcebeb;
+  --blue: #185fa5; --blue-bg: #e6f1fb;
+  --radius: 10px; --radius-sm: 6px;
+  --sidebar: 260px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1c; --bg2: #282826; --bg3: #2e2e2c;
+    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+    --text: #f0efe9; --text2: #a8a7a0; --text3: #6a6960;
+    --accent: #f0efe9; --success: #5dcaa5; --success-bg: #04342c;
+    --danger: #e57373; --danger-bg: #3c1a1a;
+    --blue: #7db8f7; --blue-bg: #0d2540;
+  }
+}
+
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg3); color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; }
+
+/* Layout */
+.layout { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar); flex-shrink: 0;
+  background: var(--bg); border-right: 0.5px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 50; overflow: hidden;
+}
+
+.sidebar-head {
+  padding: 16px 16px 12px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.sidebar-head h2 { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+
+.sidebar-list { flex: 1; overflow-y: auto; padding: 8px 8px; }
+
+.si {
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  cursor: pointer; margin-bottom: 3px;
+  border: 0.5px solid transparent;
+  transition: background 0.12s;
+}
+
+.si:hover { background: var(--bg2); }
+.si.active { background: var(--bg2); border-color: var(--border2); }
+.si-num { font-size: 13px; font-weight: 600; }
+.si-sub { font-size: 12px; color: var(--text3); margin-top: 1px; display: flex; justify-content: space-between; }
+.si-sub span:last-child { color: var(--text2); font-weight: 500; }
+
+.sidebar-empty { padding: 20px 12px; text-align: center; font-size: 13px; color: var(--text3); }
+
+/* Main content */
+.content { margin-left: var(--sidebar); flex: 1; }
+
+/* Topbar */
+.topbar {
+  background: var(--bg); border-bottom: 0.5px solid var(--border);
+  padding: 12px 24px; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
+  position: sticky; top: 0; z-index: 40;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.topbar-left h1 { font-size: 16px; font-weight: 600; }
+.badge { font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 600; background: var(--blue-bg); color: var(--blue); }
+.badge.new { background: var(--success-bg); color: var(--success); }
+.badge.saved { background: var(--bg2); color: var(--text3); }
+
+.topbar-right { display: flex; gap: 8px; align-items: center; }
+
+/* User badge */
+.user-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 20px;
+  background: var(--bg2); border: 0.5px solid var(--border);
+  font-size: 13px; cursor: pointer;
+}
+
+.user-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+/* Main form area */
+.form-area { max-width: 820px; margin: 0 auto; padding: 22px 20px 60px; }
+
+/* Cards */
+.card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
+.card-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .sidebar { display: none; }
+  .content { margin-left: 0; }
+}
+
+label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+
+input[type=text], input[type=number], input[type=date], input[type=email], select, textarea {
+  width: 100%; padding: 8px 10px;
+  border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+  background: var(--bg2); color: var(--text);
+  font-size: 14px; font-family: inherit; outline: none;
+  transition: border-color 0.12s;
+}
+
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 64px; }
+.fld { }
+
+/* Logo */
+.logo-zone {
+  border: 1.5px dashed var(--border2); border-radius: var(--radius-sm);
+  padding: 14px; text-align: center; cursor: pointer;
+  background: var(--bg2); position: relative; transition: border-color 0.12s;
+}
+.logo-zone:hover { border-color: var(--accent); }
+.logo-zone p { font-size: 12px; color: var(--text3); margin-top: 5px; }
+#logo-preview { max-height: 68px; max-width: 100%; object-fit: contain; border-radius: 4px; display: none; margin: 0 auto; }
+#logo-ph { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.rm-logo { position: absolute; top: 5px; right: 5px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: 50%; width: 21px; height: 21px; cursor: pointer; display: none; align-items: center; justify-content: center; font-size: 12px; color: var(--text2); }
+.rm-logo:hover { color: var(--danger); }
+
+/* Items */
+.items-wrap { overflow-x: auto; }
+table.it { width: 100%; border-collapse: collapse; min-width: 520px; }
+table.it th { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 0 7px 9px 0; border-bottom: 0.5px solid var(--border); text-align: left; white-space: nowrap; }
+table.it th.r { text-align: right; }
+table.it td { padding: 7px 7px 7px 0; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+table.it td.r { text-align: right; }
+table.it input { padding: 5px 7px; font-size: 13px; }
+
+.thumb { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--bg2); cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: border-color 0.12s; }
+.thumb:hover { border-color: var(--accent); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: none; }
+.thumb svg { opacity: 0.3; }
+.row-total { font-weight: 600; font-size: 13px; min-width: 86px; display: inline-block; text-align: right; }
+
+.del-btn { background: none; border: none; cursor: pointer; color: var(--text3); width: 27px; height: 27px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.del-btn:hover { background: var(--danger-bg); color: var(--danger); }
+
+.add-row-btn { display: flex; align-items: center; gap: 6px; background: none; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 7px 13px; font-size: 13px; color: var(--text2); cursor: pointer; margin-top: 10px; font-family: inherit; }
+.add-row-btn:hover { background: var(--bg2); }
+
+/* Discount */
+.disc-bar { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 13px; background: var(--bg2); border-radius: var(--radius-sm); flex-wrap: wrap; }
+.disc-bar label { margin: 0; font-size: 13px; white-space: nowrap; }
+.disc-bar input { max-width: 95px; }
+.disc-bar select { max-width: 80px; }
+#disc-hint { font-size: 13px; color: var(--success); font-weight: 500; margin-left: auto; }
+
+/* Totals */
+.totals-wrap { display: flex; justify-content: flex-end; margin-top: 14px; }
+.totals { width: 290px; }
+.tr { display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding: 4px 0; color: var(--text2); }
+.tr span:last-child { font-weight: 500; color: var(--text); }
+.tr.disc span:last-child { color: var(--success); }
+.tr.grand { border-top: 0.5px solid var(--border2); margin-top: 7px; padding-top: 11px; font-size: 17px; }
+.tr.grand span { font-weight: 700; color: var(--text); }
+
+.tax-opts { display: flex; align-items: center; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--text2); flex-wrap: wrap; }
+.tax-opts label { display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; cursor: pointer; border: 0.5px solid var(--border2); background: transparent; color: var(--text); transition: background 0.1s, opacity 0.1s; white-space: nowrap; }
+.btn:hover { background: var(--bg2); }
+.btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn-primary:hover { opacity: 0.82; background: var(--accent); }
+.btn-success { background: var(--success-bg); color: var(--success); border-color: transparent; }
+.btn-success:hover { opacity: 0.85; }
+.btn-danger { color: var(--danger); border-color: transparent; }
+.btn-danger:hover { background: var(--danger-bg); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.actions { display: flex; gap: 9px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+
+/* Toast */
+.toast { position: fixed; bottom: 22px; right: 22px; background: var(--accent); color: var(--bg); padding: 11px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; z-index: 999; transform: translateY(80px); opacity: 0; transition: transform 0.25s, opacity 0.25s; pointer-events: none; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.err { background: var(--danger); }
+
+/* User modal */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: var(--bg); border-radius: var(--radius); padding: 22px; width: 320px; max-width: 92vw; }
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+/* Img modal */
+.img-drop { border: 1.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 26px 14px; text-align: center; cursor: pointer; background: var(--bg2); margin-bottom: 12px; }
+.img-drop:hover { border-color: var(--accent); }
+.img-drop p { font-size: 12px; color: var(--text3); margin-top: 5px; }
+.modal-preview { width: 100%; max-height: 150px; object-fit: contain; border-radius: var(--radius-sm); display: none; margin-bottom: 10px; }
+
+/* Print */
+@media print {
+  .sidebar, .topbar, .actions, .add-row-btn, .del-btn, .tax-opts,
+  .disc-bar, .thumb, .rm-logo, .toast, .modal-bg { display: none !important; }
+  body { background: white; }
+  .content { margin-left: 0; }
+  .form-area { max-width: 100%; padding: 0; }
+  .card { border: none; padding: 10px 0; box-shadow: none; margin-bottom: 8px; }
+  .print-head { display: flex !important; }
+}
+
+.print-head {
+  display: none; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1.5px solid #ccc;
+}
+#print-logo { max-height: 58px; object-fit: contain; display: none; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar: lista predračuna -->
+<aside class="sidebar">
+  <div class="sidebar-head">
+    <h2>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Predračuni
+    </h2>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="newPredracun()">+ Novi predračun</button>
+  </div>
+  <div class="sidebar-list" id="sidebar-list">
+    <div class="sidebar-empty">Učitavanje...</div>
+  </div>
+</aside>
+
+<!-- Main content -->
+<div class="content">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Predračun</h1>
+      <span class="badge new" id="badge-num">Novi</span>
+      <span id="save-status" style="font-size:12px;color:var(--text3);"></span>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip" onclick="openUserModal()">
+        <div class="user-dot"></div>
+        <span id="user-label">Podesi ime</span>
+      </div>
+      <button class="btn" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Štampaj
+      </button>
+    </div>
+  </div>
+
+  <div class="form-area">
+    <!-- Print header -->
+    <div class="print-head" id="print-head">
+      <img id="print-logo" alt="Logo">
+      <div style="text-align:right;">
+        <div style="font-size:22px;font-weight:700;">PREDRAČUN</div>
+        <div id="print-num" style="font-size:14px;color:#666;"></div>
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="card">
+      <div class="card-title">Logo firme</div>
+      <div class="logo-zone" onclick="document.getElementById('logo-file').click()">
+        <div id="logo-ph">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p>Klikni da učitaš logo (PNG, JPG, SVG)</p>
+        </div>
+        <img id="logo-preview" alt="Logo">
+        <button class="rm-logo" id="rm-logo" onclick="rmLogo(event)">✕</button>
+      </div>
+      <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="handleLogo(this)">
+    </div>
+
+    <!-- Izdavalac & Kupac -->
+    <div class="grid-2" style="margin-bottom:14px;">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-title">Podaci o izdavaocu</div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div class="fld"><label>Naziv firme / preduzetnika</label><input type="text" id="from-name" placeholder="Vaša firma d.o.o."></div>
+          <div class="fld"><label>PIB</label><input type="text" id="from-pib" placeholder="123456789"></div>
+          <div class="fld"><label>MB (matični broj)</label><input type="text" id="from-mb" placeholder="12345678"></div>
+          <div class="fld"><label>Adresa</label><input type="text" id="from-addr" placeholder="Ulica i broj, Grad"></div>
+          <div class="fld"><label>Telefon</label><input type="text" id="from-tel" placeholder="011 123 4567"></div>
+          <div class="fld"><label>Email</label><input type="email" id="from-email" placeholder="firma@mail.com"></div>
+          <div class="fld"><label>Žiro račun</label><input type="text" id="from-bank" placeholder="160-123456789-12"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-title">Podaci o kupcu</div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div class="fld"><label>Naziv kupca</label><input type="text" id="to-name" placeholder="Kupac d.o.o."></div>
+          <div class="fld"><label>PIB kupca</label><input type="text" id="to-pib" placeholder="987654321"></div>
+          <div class="fld"><label>MB kupca</label><input type="text" id="to-mb" placeholder="87654321"></div>
+          <div class="fld"><label>Adresa kupca</label><input type="text" id="to-addr" placeholder="Ulica i broj, Grad"></div>
+          <div class="fld"><label>Telefon</label><input type="text" id="to-tel" placeholder="011 987 6543"></div>
+          <div class="fld"><label>Email</label><input type="email" id="to-email" placeholder="kupac@mail.com"></div>
+          <div class="fld"><label>Kontakt osoba</label><input type="text" id="to-contact" placeholder="Ime i prezime"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalji -->
+    <div class="card">
+      <div class="card-title">Detalji predračuna</div>
+      <div class="grid-3" style="margin-bottom:12px;">
+        <div class="fld"><label>Broj predračuna</label><input type="text" id="inv-num" value="PRE-001" oninput="syncNum()"></div>
+        <div class="fld"><label>Datum izdavanja</label><input type="date" id="inv-date"></div>
+        <div class="fld"><label>Rok važenja</label><input type="date" id="inv-due"></div>
+      </div>
+      <div class="grid-2">
+        <div class="fld"><label>Mesto izdavanja</label><input type="text" id="inv-place" placeholder="Beograd"></div>
+        <div class="fld"><label>Valuta plaćanja (dana)</label><input type="number" id="inv-val" value="30"></div>
+      </div>
+      <div class="fld" style="margin-top:12px;"><label>Napomena</label><textarea id="note" placeholder="Rok isporuke, uslovi plaćanja..."></textarea></div>
+    </div>
+
+    <!-- Stavke -->
+    <div class="card">
+      <div class="card-title">Stavke predračuna</div>
+      <div class="items-wrap">
+        <table class="it">
+          <thead>
+            <tr>
+              <th style="width:42px;"></th>
+              <th style="width:30%;">Opis</th>
+              <th style="width:46px;">Jed.</th>
+              <th style="width:54px;" class="r">Kol.</th>
+              <th style="width:90px;" class="r">Cena (RSD)</th>
+              <th style="width:80px;" class="r">Pop. %</th>
+              <th style="width:96px;" class="r">Iznos</th>
+              <th style="width:30px;"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <button class="add-row-btn" onclick="addItem()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Dodaj stavku
+      </button>
+
+      <div class="disc-bar">
+        <label>Popust:</label>
+        <input type="number" id="disc-val" min="0" step="0.01" placeholder="0" oninput="recalc()" style="width:95px;">
+        <select id="disc-type" onchange="recalc()" style="width:80px;"><option value="pct">%</option><option value="fix">RSD</option></select>
+        <span id="disc-hint"></span>
+      </div>
+
+      <div class="tax-opts">
+        <label><input type="checkbox" id="include-tax" checked onchange="recalc()"> Obračunaj PDV</label>
+        <label>Stopa: <select id="tax-rate" onchange="recalc()" style="margin-left:5px;width:78px;"><option value="20">20%</option><option value="10">10%</option><option value="8">8%</option><option value="0">0%</option></select></label>
+      </div>
+
+      <div class="totals-wrap">
+        <div class="totals">
+          <div class="tr"><span>Međuzbir (bez popusta)</span><span id="t-sub">0,00 RSD</span></div>
+          <div class="tr disc" id="t-disc-row" style="display:none;"><span>Ukupni popust</span><span id="t-disc">0,00 RSD</span></div>
+          <div class="tr" id="t-tax-row"><span>PDV (<span id="t-tax-lbl">20%</span>)</span><span id="t-tax">0,00 RSD</span></div>
+          <div class="tr grand"><span>Ukupno za uplatu</span><span id="t-grand">0,00 RSD</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-danger" onclick="deletePredracun()" id="btn-delete" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+        Obriši
+      </button>
+      <button class="btn" onclick="newPredracun()">Novi</button>
+      <button class="btn btn-success" onclick="savePredracun()" id="btn-save">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Sačuvaj
+      </button>
+      <button class="btn btn-primary" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Štampaj / PDF
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- User modal -->
+<div class="modal-bg" id="user-modal">
+  <div class="modal">
+    <h3>Tvoje ime</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Ovo se prikazuje kao "kreirao" na predračunu.</p>
+    <input type="text" id="user-input" placeholder="Unesite vaše ime">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeUserModal()">Otkaži</button>
+      <button class="btn btn-primary" onclick="saveUser()">Potvrdi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Img modal -->
+<div class="modal-bg" id="img-modal">
+  <div class="modal">
+    <h3>Slika proizvoda</h3>
+    <img class="modal-preview" id="modal-preview" alt="">
+    <div class="img-drop" onclick="document.getElementById('item-file').click()">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p>Klikni da odabereš sliku</p>
+    </div>
+    <input type="file" id="item-file" accept="image/*" style="display:none" onchange="handleItemImg(this)">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImgModal()">Otkaži</button>
+      <button class="btn btn-danger" id="rm-img-btn" style="display:none;" onclick="removeItemImg()">Ukloni</button>
+      <button class="btn btn-primary" onclick="confirmImg()">Potvrdi</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let counter = 0;
+let currentId = null;  // null = novi predračun
+let activeImgRow = null;
+let pendingImgSrc = null;
+let currentUser = localStorage.getItem('predracun_user') || '';
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('user-label').textContent = currentUser || 'Podesi ime';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('inv-date').value = today;
+  const due = new Date(); due.setDate(due.getDate() + 30);
+  document.getElementById('inv-due').value = due.toISOString().split('T')[0];
+  addItem(); addItem();
+  fetchSledeciBroj();
+  loadSidebar();
+});
+
+// ── Helpers ────────────────────────────────────────────────
+const fmt = n => n.toLocaleString('sr-RS', {minimumFractionDigits:2,maximumFractionDigits:2}) + ' RSD';
+const esc = s => String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+function showToast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = 'toast', 2800);
+}
+
+function syncNum() {
+  const v = document.getElementById('inv-num').value || 'Novi';
+  document.getElementById('badge-num').textContent = v;
+  document.getElementById('print-num').textContent = v;
+}
+
+// ── User ───────────────────────────────────────────────────
+function openUserModal() {
+  document.getElementById('user-input').value = currentUser;
+  document.getElementById('user-modal').classList.add('open');
+  setTimeout(() => document.getElementById('user-input').focus(), 80);
+}
+
+function closeUserModal() { document.getElementById('user-modal').classList.remove('open'); }
+
+function saveUser() {
+  currentUser = document.getElementById('user-input').value.trim() || 'Korisnik';
+  localStorage.setItem('predracun_user', currentUser);
+  document.getElementById('user-label').textContent = currentUser;
+  closeUserModal();
+}
+
+document.getElementById('user-input').addEventListener('keydown', e => { if(e.key==='Enter') saveUser(); });
+
+// ── Logo ───────────────────────────────────────────────────
+function handleLogo(input) {
+  if (!input.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const src = e.target.result;
+    document.getElementById('logo-preview').src = src;
+    document.getElementById('logo-preview').style.display = 'block';
+    document.getElementById('logo-ph').style.display = 'none';
+    document.getElementById('rm-logo').style.display = 'flex';
+    document.getElementById('print-logo').src = src;
+    document.getElementById('print-logo').style.display = 'block';
+  };
+  r.readAsDataURL(input.files[0]);
+}
+
+function rmLogo(e) {
+  e.stopPropagation();
+  document.getElementById('logo-preview').style.display = 'none';
+  document.getElementById('logo-preview').src = '';
+  document.getElementById('logo-ph').style.display = 'flex';
+  document.getElementById('rm-logo').style.display = 'none';
+  document.getElementById('print-logo').style.display = 'none';
+  document.getElementById('logo-file').value = '';
+}
+
+// ── Items ──────────────────────────────────────────────────
+function addItem(name='', unit='kom', qty=1, price=0, imgSrc='', disc=0) {
+  counter++;
+  const id = counter;
+  const tbody = document.getElementById('tbody');
+  const tr = document.createElement('tr');
+  tr.id = 'r'+id; tr.dataset.img = imgSrc;
+  tr.innerHTML = `
+    <td>
+      <div class="thumb" onclick="openImgModal(${id})" title="Dodaj sliku">
+        <img id="ti${id}" src="${imgSrc||''}" alt="" style="${imgSrc?'display:block':'display:none'}">
+        <svg id="ts${id}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="${imgSrc?'display:none':''}"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+    </td>
+    <td><input type="text" placeholder="Naziv / opis" value="${esc(name)}" oninput="recalc()"></td>
+    <td><input type="text" value="${esc(unit)}" style="width:44px;text-align:center;"></td>
+    <td class="r"><input type="number" min="0" step="any" value="${qty}" oninput="recalc()" style="width:52px;text-align:right;"></td>
+    <td class="r"><input type="number" min="0" step="0.01" value="${price||''}" placeholder="0.00" oninput="recalc()" style="width:84px;text-align:right;"></td>
+    <td class="r">
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+        <input type="number" min="0" max="100" step="0.1" value="${disc||''}" placeholder="0" oninput="recalc()" style="width:52px;text-align:right;" title="Popust za ovu stavku (%)">
+        <span style="font-size:12px;color:var(--text3);">%</span>
+      </div>
+      <div id="rd${id}" style="font-size:11px;color:var(--success);text-align:right;margin-top:1px;"></div>
+    </td>
+    <td class="r"><span class="row-total" id="rt${id}">0,00 RSD</span></td>
+    <td><button class="del-btn" onclick="removeItem(${id})">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  recalc();
+}
+
+function removeItem(id) {
+  document.getElementById('r'+id)?.remove();
+  recalc();
+}
+
+function recalc() {
+  let sub = 0;
+  let totalItemDisc = 0;
+  document.querySelectorAll('#tbody tr').forEach(tr => {
+    const id = tr.id.replace('r','');
+    const nums = tr.querySelectorAll('input[type=number]');
+    const qty = parseFloat(nums[0]?.value)||0;
+    const price = parseFloat(nums[1]?.value)||0;
+    const itemDisc = Math.min(Math.max(parseFloat(nums[2]?.value)||0, 0), 100);
+    const gross = qty * price;
+    const discAmt = gross * itemDisc / 100;
+    const net = gross - discAmt;
+    const rdEl = document.getElementById('rd'+id);
+    if(rdEl) rdEl.textContent = (itemDisc > 0) ? ('− '+fmt(discAmt)) : '';
+    const el = document.getElementById('rt'+id);
+    if(el) el.textContent = fmt(net);
+    sub += gross;
+    totalItemDisc += discAmt;
+  });
+
+  const afterItemDisc = sub - totalItemDisc;
+
+  const dv = parseFloat(document.getElementById('disc-val').value)||0;
+  const dt = document.getElementById('disc-type').value;
+  let globalDisc = dt==='pct' ? afterItemDisc*dv/100 : Math.min(dv, afterItemDisc);
+  if(dv<=0) globalDisc=0;
+  const after = afterItemDisc - globalDisc;
+  const inclTax = document.getElementById('include-tax').checked;
+  const tr2 = parseFloat(document.getElementById('tax-rate').value)/100;
+  const taxAmt = inclTax ? after*tr2 : 0;
+  const grand = after + taxAmt;
+
+  const totalDisc = totalItemDisc + globalDisc;
+
+  document.getElementById('t-sub').textContent = fmt(sub);
+  document.getElementById('t-disc-row').style.display = totalDisc>0?'':'none';
+  document.getElementById('t-disc').textContent = '− '+fmt(totalDisc);
+  document.getElementById('disc-hint').textContent = globalDisc>0?'Uštedeli ste '+fmt(globalDisc):'';
+  document.getElementById('t-tax-row').style.display = inclTax?'':'none';
+  document.getElementById('t-tax').textContent = fmt(taxAmt);
+  document.getElementById('t-tax-lbl').textContent = document.getElementById('tax-rate').value+'%';
+  document.getElementById('t-grand').textContent = fmt(grand);
+}
+
+// ── Image modal ────────────────────────────────────────────
+function openImgModal(id) {
+  activeImgRow = id; pendingImgSrc = null;
+  const tr = document.getElementById('r'+id);
+  const prev = document.getElementById('modal-preview');
+  const rmBtn = document.getElementById('rm-img-btn');
+  if(tr.dataset.img) {
+    prev.src = tr.dataset.img; prev.style.display='block';
+    rmBtn.style.display='inline-flex'; pendingImgSrc=tr.dataset.img;
+  } else { prev.style.display='none'; rmBtn.style.display='none'; }
+  document.getElementById('item-file').value='';
+  document.getElementById('img-modal').classList.add('open');
+}
+
+function closeImgModal() { document.getElementById('img-modal').classList.remove('open'); }
+
+function handleItemImg(input) {
+  if(!input.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => {
+    pendingImgSrc = e.target.result;
+    document.getElementById('modal-preview').src = e.target.result;
+    document.getElementById('modal-preview').style.display = 'block';
+    document.getElementById('rm-img-btn').style.display = 'inline-flex';
+  };
+  r.readAsDataURL(input.files[0]);
+}
+
+function confirmImg() {
+  if(activeImgRow && pendingImgSrc) {
+    const tr = document.getElementById('r'+activeImgRow);
+    tr.dataset.img = pendingImgSrc;
+    document.getElementById('ti'+activeImgRow).src = pendingImgSrc;
+    document.getElementById('ti'+activeImgRow).style.display = 'block';
+    const ic = document.getElementById('ts'+activeImgRow);
+    if(ic) ic.style.display='none';
+  }
+  closeImgModal();
+}
+
+function removeItemImg() {
+  pendingImgSrc = null;
+  document.getElementById('modal-preview').src='';
+  document.getElementById('modal-preview').style.display='none';
+  document.getElementById('rm-img-btn').style.display='none';
+  if(activeImgRow) {
+    const tr=document.getElementById('r'+activeImgRow);
+    tr.dataset.img='';
+    document.getElementById('ti'+activeImgRow).src='';
+    document.getElementById('ti'+activeImgRow).style.display='none';
+    const ic=document.getElementById('ts'+activeImgRow);
+    if(ic) ic.style.display='';
+  }
+}
+
+document.getElementById('img-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeImgModal(); });
+document.getElementById('user-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeUserModal(); });
+
+// ── Collect / populate form data ───────────────────────────
+function collectData() {
+  const rows = [];
+  document.querySelectorAll('#tbody tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    rows.push({
+      name: inputs[0]?.value||'', unit: inputs[1]?.value||'kom',
+      qty: parseFloat(inputs[2]?.value)||0, price: parseFloat(inputs[3]?.value)||0,
+      disc: parseFloat(inputs[4]?.value)||0,
+      img: tr.dataset.img||''
+    });
+  });
+  const g = id => document.getElementById(id)?.value||'';
+  return {
+    logo: document.getElementById('logo-preview').src||'',
+    fromName:g('from-name'), fromPib:g('from-pib'), fromMb:g('from-mb'),
+    fromAddr:g('from-addr'), fromTel:g('from-tel'), fromEmail:g('from-email'), fromBank:g('from-bank'),
+    toName:g('to-name'), toPib:g('to-pib'), toMb:g('to-mb'),
+    toAddr:g('to-addr'), toTel:g('to-tel'), toEmail:g('to-email'), toContact:g('to-contact'),
+    invNum:g('inv-num'), invDate:g('inv-date'), invDue:g('inv-due'),
+    invPlace:g('inv-place'), invVal:g('inv-val'), note:g('note'),
+    discVal:g('disc-val'), discType:document.getElementById('disc-type').value,
+    taxRate:document.getElementById('tax-rate').value,
+    inclTax:document.getElementById('include-tax').checked,
+    grandTotal: document.getElementById('t-grand').textContent,
+    rows
+  };
+}
+
+function populateForm(d) {
+  const s = (id,v) => { const el=document.getElementById(id); if(el&&v!==undefined) el.value=v; };
+  if(d.logo && d.logo.startsWith('data:')) {
+    document.getElementById('logo-preview').src=d.logo;
+    document.getElementById('logo-preview').style.display='block';
+    document.getElementById('logo-ph').style.display='none';
+    document.getElementById('rm-logo').style.display='flex';
+    document.getElementById('print-logo').src=d.logo;
+    document.getElementById('print-logo').style.display='block';
+  }
+  s('from-name',d.fromName); s('from-pib',d.fromPib); s('from-mb',d.fromMb);
+  s('from-addr',d.fromAddr); s('from-tel',d.fromTel); s('from-email',d.fromEmail); s('from-bank',d.fromBank);
+  s('to-name',d.toName); s('to-pib',d.toPib); s('to-mb',d.toMb);
+  s('to-addr',d.toAddr); s('to-tel',d.toTel); s('to-email',d.toEmail); s('to-contact',d.toContact);
+  s('inv-num',d.invNum); s('inv-date',d.invDate); s('inv-due',d.invDue);
+  s('inv-place',d.invPlace); s('inv-val',d.invVal); s('note',d.note);
+  s('disc-val',d.discVal); s('disc-type',d.discType); s('tax-rate',d.taxRate);
+  if(typeof d.inclTax!=='undefined') document.getElementById('include-tax').checked=d.inclTax;
+  syncNum();
+  document.querySelectorAll('#tbody tr').forEach(r=>r.remove());
+  if(d.rows && d.rows.length) d.rows.forEach(r=>addItem(r.name,r.unit,r.qty,r.price,r.img||'',r.disc||0));
+  else { addItem(); addItem(); }
+  recalc();
+}
+
+// ── API calls ──────────────────────────────────────────────
+async function loadSidebar() {
+  try {
+    const res = await fetch('/api/predracuni');
+    const list = await res.json();
+    const el = document.getElementById('sidebar-list');
+    if(!list.length) { el.innerHTML='<div class="sidebar-empty">Još nema predračuna</div>'; return; }
+    el.innerHTML = list.map(p=>`
+      <div class="si${currentId==p.id?' active':''}" onclick="loadPredracun(${p.id})" id="si${p.id}">
+        <div class="si-num">${p.broj}</div>
+        <div class="si-sub">
+          <span>${p.kupac||'—'}</span>
+          <span>${p.ukupno||''}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${p.kreirao} · ${p.datum_izmene?.slice(0,10)||''}</div>
+      </div>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function fetchSledeciBroj() {
+  try {
+    const res = await fetch('/api/sledeci-broj');
+    const d = await res.json();
+    document.getElementById('inv-num').value = d.broj;
+    syncNum();
+  } catch(e) {}
+}
+
+async function savePredracun() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'Čuvam...';
+  try {
+    const podaci = collectData();
+    const payload = { broj: podaci.invNum, kreirao: currentUser||'Nepoznat', podaci };
+    let res;
+    if(currentId) {
+      res = await fetch('/api/predracuni/'+currentId, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    } else {
+      res = await fetch('/api/predracuni', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      const d = await res.json();
+      currentId = d.id;
+      document.getElementById('btn-delete').style.display='inline-flex';
+    }
+    showToast('✓ Predračun sačuvan!');
+    document.getElementById('save-status').textContent = 'Sačuvano ' + new Date().toLocaleTimeString('sr-RS');
+    loadSidebar();
+  } catch(e) { showToast('Greška pri čuvanju!', true); }
+  finally { btn.disabled=false; btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Sačuvaj'; }
+}
+
+async function loadPredracun(id) {
+  try {
+    const res = await fetch('/api/predracuni/'+id);
+    const row = await res.json();
+    currentId = row.id;
+    populateForm(row.podaci);
+    document.getElementById('btn-delete').style.display='inline-flex';
+    document.getElementById('save-status').textContent = 'Izmenjeno: '+row.datum_izmene?.slice(0,10);
+    document.querySelectorAll('.si').forEach(el=>el.classList.remove('active'));
+    document.getElementById('si'+id)?.classList.add('active');
+    window.scrollTo(0,0);
+  } catch(e) { showToast('Greška pri učitavanju!', true); }
+}
+
+async function deletePredracun() {
+  if(!currentId || !confirm('Obrisati ovaj predračun?')) return;
+  try {
+    await fetch('/api/predracuni/'+currentId, { method:'DELETE' });
+    showToast('Predračun obrisan.');
+    newPredracun();
+    loadSidebar();
+  } catch(e) { showToast('Greška!', true); }
+}
+
+function newPredracun() {
+  currentId = null;
+  document.querySelectorAll('#tbody tr').forEach(r=>r.remove());
+  ['from-name','from-pib','from-mb','from-addr','from-tel','from-email','from-bank',
+   'to-name','to-pib','to-mb','to-addr','to-tel','to-email','to-contact',
+   'note','disc-val','inv-place'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('inv-val').value='30';
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('inv-date').value=today;
+  const due=new Date(); due.setDate(due.getDate()+30);
+  document.getElementById('inv-due').value=due.toISOString().split('T')[0];
+  rmLogo({stopPropagation:()=>{}});
+  document.getElementById('btn-delete').style.display='none';
+  document.getElementById('save-status').textContent='';
+  document.querySelectorAll('.si').forEach(el=>el.classList.remove('active'));
+  fetchSledeciBroj();
+  addItem(); addItem();
+  recalc();
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
